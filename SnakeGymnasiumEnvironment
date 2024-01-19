@@ -1,0 +1,102 @@
+# Snake Game
+
+import gymnasium
+from gymnasium import spaces
+import numpy as np
+import random
+
+class SnakeEnv2(gymnasium.Env):
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self):
+        super(SnakeEnv2, self).__init__()
+
+        pygame.init()
+        self.food_spawn = True
+        self.screen = pygame.display.set_mode([480, 480])
+        self.clock = pygame.time.Clock()
+
+        self.action_space = spaces.Discrete(4)  # Four directions
+        self.observation_space = spaces.Box(low=0, high=490, shape=(4,))
+
+        self.snake_pos = [100, 50]
+        self.snake_body = [[100, 50], [90, 50], [80, 50]]
+        self.food_pos = [random.randrange(1, 40) * 10, random.randrange(1, 40) * 10]
+        self.reward = 0
+        self.done = False
+
+    def step(self, action):
+    # Existing code for action...
+
+    # Update the snake's position using steps of 10 units
+        if action == 0:  # up
+            new_pos = [self.snake_pos[0], self.snake_pos[1] - 10]
+        elif action == 1:  # down
+            new_pos = [self.snake_pos[0], self.snake_pos[1] + 10]
+        elif action == 2:  # left
+            new_pos = [self.snake_pos[0] - 10, self.snake_pos[1]]
+        elif action == 3:  # right
+            new_pos = [self.snake_pos[0] + 10, self.snake_pos[1]]
+
+    # Check if the new position is in the snake's body or out of bounds
+        if new_pos in self.snake_body or new_pos[0] < 0 or new_pos[0] >= 480 or new_pos[1] < 0 or new_pos[1] >= 480:
+            self.done = True
+            self.reward = -10  # Negative reward for dying or going out of bounds
+            return np.array(self.snake_pos + self.food_pos), self.reward, self.done, False, {}
+
+        self.snake_pos = new_pos
+
+        if self.snake_pos == self.food_pos:  # Eating food
+            self.reward += 100
+            self.food_spawn = False
+        # Grow the snake body
+            self.snake_body.insert(0, list(new_pos))
+        else:
+            self.snake_body.pop()  # Move the snake body
+            self.snake_body.insert(0, list(new_pos))
+            self.reward = 0
+
+    # Respawn food and ensure it's not in the snake's body
+        if not self.food_spawn:
+            while True:
+                new_food_pos = [random.randrange(1, 48) * 10, random.randrange(1, 48) * 10]
+                if new_food_pos not in self.snake_body:
+                    self.food_pos = new_food_pos
+                    break
+            self.food_spawn = True
+
+        return np.array(self.snake_pos + self.food_pos), self.reward, self.done, False, {}
+
+
+
+    def reset(self,seed=None, options=None):
+        self.snake_pos = [100, 50]
+        self.snake_body = [[100, 50], [90, 50], [80, 50]]
+        self.food_pos = [random.randrange(1, 40) * 10, random.randrange(1, 40) * 10]
+        self.reward = 0
+        self.done = False
+        return np.array(self.snake_pos + self.food_pos),{}
+
+    def render(self, mode='human'):
+        if mode != 'human':
+            raise NotImplementedError()
+
+        # Clear the screen
+        self.screen.fill((0, 0, 0))
+
+        for pos in self.snake_body:
+            pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(pos[0], pos[1], 10, 10))
+
+        # Draw the food
+        pygame.draw.rect(self.screen, (255, 0, 0), pygame.Rect(self.food_pos[0], self.food_pos[1], 10, 10))
+
+        # Flip the display
+        pygame.display.flip()
+        self.clock.tick(30)  # Limit the frame rate to 30 FPS
+
+
+    def close(self):
+        pygame.quit()
+
+
+
