@@ -1,0 +1,89 @@
+# Env 6
+import gymnasium
+from gymnasium import spaces
+import numpy as np
+
+
+class TicTacToeEnv(gymnasium.Env):
+    def __init__(self):
+        super(TicTacToeEnv, self).__init__()
+
+        # Define action space: 0-8 for each cell on the board
+        self.action_space = spaces.Discrete(9)
+
+        # Define observation space: 0 for empty, 1 for X, 2 for O
+        self.observation_space = spaces.MultiDiscrete([3] * 9)
+
+        # Initialize the board
+        self.board = np.zeros(9, dtype=np.int32)
+
+        # Set the current player: 1 for X, 2 for O
+        self.current_player = 1
+
+    def reset(self, seed=None, options=None):
+        # Reset the board and set the current player to X
+        self.board = np.zeros(9, dtype=np.int32)
+        self.current_player = 1
+        return self.board.copy(),{}
+
+    def step(self, action):
+        # Check if the action is valid
+        if self.board[action] != 0:
+            raise ValueError("Invalid action")
+
+        # Update the board with the current player's move
+        self.board[action] = self.current_player
+
+        # Check if the game is over
+        done = self.is_game_over()
+
+        # Calculate the reward
+        reward = self.get_reward()
+
+        # Switch to the next player
+        self.current_player = 3 - self.current_player
+
+        return self.board.copy(), reward, done,False, {}
+
+    def is_game_over(self):
+        # Check if any player has won
+        winning_combinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],  # Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],  # Columns
+            [0, 4, 8], [2, 4, 6]  # Diagonals
+        ]
+        for combination in winning_combinations:
+            if self.board[combination[0]] == self.board[combination[1]] == self.board[combination[2]] != 0:
+                return True
+
+        # Check if the board is full
+        if np.all(self.board != 0):
+            return True
+
+        return False
+
+    def get_reward(self):
+        # Check if any player has won
+        winning_combinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],  # Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],  # Columns
+            [0, 4, 8], [2, 4, 6]  # Diagonals
+        ]
+        for combination in winning_combinations:
+            if self.board[combination[0]] == self.board[combination[1]] == self.board[combination[2]] != 0:
+                if self.board[combination[0]] == 1:
+                    return 1  # X wins
+                else:
+                    return -1  # O wins
+
+        # If the game is not over, return 0
+        return 0
+
+    def render(self, mode='human'):
+        # Print the current board state
+        symbols = [' ', 'X', 'O']
+        print(f" {symbols[self.board[0]]} | {symbols[self.board[1]]} | {symbols[self.board[2]]} ")
+        print("---+---+---")
+        print(f" {symbols[self.board[3]]} | {symbols[self.board[4]]} | {symbols[self.board[5]]} ")
+        print("---+---+---")
+        print(f" {symbols[self.board[6]]} | {symbols[self.board[7]]} | {symbols[self.board[8]]} ")
